@@ -1,4 +1,7 @@
 import re
+import save_melon
+
+save_melon.save()
 
 source = open('melon.html', 'rt').read()
 
@@ -6,10 +9,7 @@ def print_chart(chart):
     print('\n=================================================================\n')
     print('[')
     for info in chart:
-        print('\t{')
-        for key, value in info.items():
-            print(f'\t\t\"{key}\" : ', f'{value}' if type(value) is int else f'\"{value}\"')
-        print('\t}')
+        print(f'\t{info}')
     print(']')
 
 chart = list()
