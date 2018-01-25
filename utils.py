@@ -14,8 +14,9 @@ def get_top100_list(refresh_html=False):
         현재 파일(모듈)의 위치를 사용한 상위 디렉토리 경로(crawler디렉토리):
             os.path.dirname(os.path.abspath(__name__))
         os.path.join()
-        1~50위 : data/chart_realtile_50.html
-        51~100위 : data/chart_realtile_100.html
+        data/chart_realtile_100.html
+    :param refresh_html: True일 경우, 무조건 새 HTML을 받아와 저장
+    :return: 100위 까지의 dict list를 반환
     '''
 
     #프로젝트 컨테이너 폴더 경로
@@ -54,12 +55,9 @@ def get_top100_list(refresh_html=False):
 
     soup = BeautifulSoup(source, 'lxml')
 
-    tr_list = soup.find_all('tr', class_='lst50')
-    tr_list += soup.find_all('tr', class_='lst100')
-
     result = list()
 
-    for tr in tr_list:
+    for tr in soup.find_all('tr', class_=['lst50','lst100']):
         rank = tr.find('span', class_='rank').text
         title = tr.find('div', class_='rank01').find('a').text
         artist = tr.find('div', class_='rank02').find('a').text
