@@ -34,39 +34,30 @@ def get_top100_list(refresh_html=False):
 
     os.makedirs(path_data_dir, exist_ok=True)
 
-    # 1~50 50~100위 주소
-    url_chart_realtime_50 = 'https://www.melon.com/chart/index.htm'
-    url_chart_realtime_100 = 'http://www.melon.com/chart/index.htm#params%5Bidx%5D=51'
+    # 1-100위 주소
+    url_chart_realtime = 'https://www.melon.com/chart/index.htm'
 
-    # 1~50위에 해당하는 웹페이지 HTML을
-    # data/chart_realtime_50html에 저장
+    # 1~100위에 해당하는 웹페이지 HTML을
+    # data/chart_realtime_html에 저장
     source = ''
 
-    file_path = os.path.join(path_data_dir, 'chart_realtime_50.html')
+    file_path = os.path.join(path_data_dir, 'chart_realtime.html')
     try:
-        with open(file_path, 'xt') as f:
-            response = requests.get(url_chart_realtime_50)
+        file_mode = 'wt' if refresh_html else 'xt'
+        with open(file_path, file_mode) as f:
+            response = requests.get(url_chart_realtime)
             source = response.text
             f.write(source)
     except FileExistsError as e:
         print(f'"{file_path}" file is already exists!')
         source = open('melon.html', 'rt').read()
 
-    file_path = os.path.join(path_data_dir, 'chart_realtime_100.html')
-    if not os.path.exists(file_path):
-        response = requests.get(url_chart_realtime_100)
-        source += response.text
-        with open(file_path, 'wt') as f:
-            f.write(source)
-    else:
-        print(f'"{file_path}" file is already exists!')
-        source += open('melon.html', 'rt').read()
-
     soup = BeautifulSoup(source, 'lxml')
 
-    result = list()
     tr_list = soup.find_all('tr', class_='lst50')
     tr_list += soup.find_all('tr', class_='lst100')
+
+    result = list()
 
     for tr in tr_list:
         rank = tr.find('span', class_='rank').text
