@@ -1,6 +1,5 @@
-from utils import get_top100_list
+from utils import *
 
 if __name__ == '__main__':
     result = get_top100_list()
-    for item in result:
-        print(item)
+    get_song_detail(result)
