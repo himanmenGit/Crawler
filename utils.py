@@ -10,7 +10,7 @@ __all__ = (
 
 def custom_make_dir(dirname):
     #프로젝트 컨테이너 폴더 경로
-    path_module = os.path.abspath(__name__)
+    path_module = os.path.abspath(__file__)
     print(f'path_module: {path_module}')
 
     root_dir = os.path.dirname(path_module)
