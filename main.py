@@ -12,9 +12,8 @@ from utils.models import MelonCrawler
 
 if __name__ == '__main__':
     crawler = MelonCrawler()
-    q = input('검색할 곡 명을 입력해주세요: ')
-    song_list = crawler.get_song_search(q)
-    # for song in song_list:
-    #     print(song_list)
-    song_list[0].get_detail()
-    print(song_list[0].lyrics)
+    # q = input('검색할 곡 명을 입력해주세요: ')
+    # song_list = crawler.get_song_search(q)
+    # q = input('검색할 아티스트를 입력해주세요: ')
+    artist_list = crawler.get_search_artist('아이유')
+    artist_list[0].get_detail()
