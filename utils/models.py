@@ -45,9 +45,15 @@ class MelonCrawler:
 
         tr_list = soup.select('form#frm_defaultList > div > table > tbody > tr')
         for tr in tr_list:
+            # frm_defaultList > div > table > tbody > tr:nth-child(1) > td:nth-child(3) > div > div > a.fc_gray
             song_id = tr.select_one('td:nth-of-type(1) input[type=checkbox]').get('value')
-            title = tr.select_one('td:nth-of-type(3) a.fc_gray').get_text(strip=True)
-
+            title = None
+            title_a = tr.select_one('td:nth-of-type(3) a.fc_gray')
+            title_s = tr.select_one('td:nth-of-type(3) > div > div > span')
+            if title_a:
+                title = title_a.get_text(strip=True)
+            else:
+                title = title_s.get_text(strip=True)
             artist = tr.select_one('td:nth-of-type(4) span.checkEllipsisSongdefaultList').get_text(strip=True)
             album = tr.select_one('td:nth-of-type(5) a').get_text(strip=True)
 
@@ -113,8 +119,8 @@ class MelonCrawler:
                 'artist_title_song': artist_title_song,
                 'artist_id': artist_id,
             })
-            # for print_artist in print_list:
-            #     print(print_artist)
+            for print_artist in print_list:
+                print(print_artist)
 
             # 아티스트 객체 만들기 (타이틀 곡은 상세정보와 상이 하여 제외)
             artist = Artist(
@@ -128,6 +134,7 @@ class MelonCrawler:
 
             artist_list.append(artist)
 
+        print("=" * 200)
         return artist_list
 
 
@@ -273,7 +280,7 @@ class Artist:
 
         # 아티스트 검색후 채워 넣을 요약 정보들
         # self.simple_info_dic = dict()
-        self.simple_title_song = None
+        self.simple_debut_song = None
         self.simple_debut = None
         self.simple_birthday = None
         self.simple_company = None
@@ -345,6 +352,12 @@ class Artist:
         artist_award = artist_info_dl.select_one('dd.awarded > span').get_text()
         # print(artist_award)
 
+        self.simple_debut_song = artist_debut_title
+        self.simple_debut = artist_debut
+        self.simple_birthday = artist_birthday
+        self.simple_company = artist_type
+        self.simple_award_history = artist_award
+
         # ==================== 상세 정보 ===================== #
 
         # 수상 정보들
@@ -361,7 +374,7 @@ class Artist:
             elif type(item) is NavigableString:
                 introduce_list.append(item.strip())
 
-        artist_detail_intoruduce = ''.join(introduce_list)
+        artist_detail_introduce = ''.join(introduce_list)
 
         # 아티스트 활동 정보
         artist_active_info_dl = soup.select_one('#conts > div.section_atistinfo03 > dl')
@@ -372,18 +385,21 @@ class Artist:
 
         active_dt_dd_iter = iter(active_dt_dd_list)
         artist_detail_active_info = dict(zip(active_dt_dd_iter, active_dt_dd_iter))
-        # print(artist_detail_active_info)
 
         # 아티스트 신상 정보
         artist_normal_info = soup.select_one('#conts > div.section_atistinfo04 > dl')
-        nromal_dt_dd_list = list()
+        normal_dt_dd_list = list()
         for dt, dd in zip(artist_normal_info.find_all('dt'), artist_normal_info.find_all('dd')):
-            nromal_dt_dd_list.append(dt.get_text(strip=True))
-            nromal_dt_dd_list.append(dd.get_text(strip=True))
+            normal_dt_dd_list.append(dt.get_text(strip=True))
+            normal_dt_dd_list.append(dd.get_text(strip=True))
 
-        normal_dt_dd_iter = iter(nromal_dt_dd_list)
+        normal_dt_dd_iter = iter(normal_dt_dd_list)
         artist_detail_normal_info = dict(zip(normal_dt_dd_iter, normal_dt_dd_iter))
-        # print(artist_detail_normal_info)
+
+        self.detail_award_history = artist_detail_award_list
+        self.detail_artist_introduce = artist_detail_introduce
+        self.detail_activity_info = artist_detail_active_info
+        self.detail_info = artist_detail_normal_info
 
     def get_songs(self):
         """
@@ -391,6 +407,38 @@ class Artist:
         :param self: 자기 자신
         :return: Song의 List
         """
+        song_list = list()
+
+        params = {
+            'artistId': self.artist_id,
+        }
+        response = requests.get(f'https://www.melon.com/artist/song.htm', params)
+        soup = BeautifulSoup(response.text, 'lxml')
+
+        song_tr_list = soup.select('#frm > div > table > tbody > tr')
+        for tr in song_tr_list:
+            title = tr.select_one('td:nth-of-type(3) > div > div > a.fc_gray').get_text()
+            artist = tr.select_one('#artistName > a').get_text()
+            album = tr.select_one('td:nth-of-type(5) > div > div > a').get_text()
+
+            song_list.append({
+                '곡명': title,
+                '아티스트': artist,
+                '앨범': album
+            })
+
+        return song_list
+
+    def __str__(self):
+        return f'\n기본 정보 1\n\t{self.name}\t(국적: {self.country}, 성별: {self.gender}, 활동정보: {self.type}, 장르: {self.genre_list}, 아티스트 번호: {self.artist_id})' \
+               f'\n\n기본 정보 2\n\t데뷔: {self.simple_debut}, 데뷔곡: {self.simple_debut_song}, 생일: {self.simple_birthday}, 소속사: {self.simple_company}, 수상이력: {self.simple_award_history}' \
+               f'\n\n상세 정보' \
+               f'\n\n수상 이력: {self.detail_award_history}' \
+               f'\n\n아티스트 소개: {self.detail_artist_introduce}' \
+               f'\n\n활동 이력: {self.detail_activity_info}' \
+               f'\n\n신상 정보: {self.detail_info}'
+
         pass
+
 
 ########################################################################################################################
