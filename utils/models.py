@@ -272,14 +272,52 @@ class Artist:
         self.artist_id = kwargs['artist_id']
 
         # 아티스트 검색후 채워 넣을 요약 정보들
-        self.simple_info_dic = dict()
+        self._info = dict()
 
         # 아티스트 검색후 상세 정보 페이지 정보
-        self.detail_award_history = list()
-        self.detail_artist_introduce = None
-        self.detail_activity_info = dict()
-        self.detail_info = dict()
-        self.detail_relative_info = dict()
+        self._award_history = list()
+        self._introduction = None
+        self._activity_information = dict()
+        self._personal_information = dict()
+        self._related_information = dict()
+
+        self._loaded = False
+
+    @property
+    def info(self):
+        if not self._loaded:
+            self.get_detail()
+        return self._info
+
+    @property
+    def award_history(self):
+        if not self._loaded:
+            self.get_detail()
+        return self._award_history
+
+    @property
+    def introduction(self):
+        if not self._loaded:
+            self.get_detail()
+        return self._introduction
+
+    @property
+    def activity_information(self):
+        if not self._loaded:
+            self.get_detail()
+        return self._activity_information
+
+    @property
+    def personal_information(self):
+        if not self._loaded:
+            self.get_detail()
+        return self._personal_information
+
+    @property
+    def related_information(self):
+        if not self._loaded:
+            self.get_detail()
+        return self._related_information
 
     def get_artist_dt_dd(self, soup, css_selector, is_span_tag=False):
         dt_dd_list = list()
@@ -293,11 +331,13 @@ class Artist:
                         dt_dd_list.append(dt_dd_span.get_text(strip=True))
                     else:
                         dt_dd_list.append(dd.get_text(strip=True))
+                else:
+                    dt_dd_list.append(dd.get_text(strip=True))
 
             dt_dd_iter = iter(dt_dd_list)
             return dict(zip(dt_dd_iter, dt_dd_iter))
         else:
-            return []
+            return {}
 
     def get_detail(self, refresh_html=False):
         """
@@ -336,7 +376,7 @@ class Artist:
             self.name += artist_real_name.get_text()
 
         # 아티스트 요약 프로필 정보들(데뷔, 데뷔곡, 생일, 활동유형, 소속사, 수상이력,
-        self.simple_info_dic = self.get_artist_dt_dd(artist_simple_div, 'dl', True)
+        self._info = self.get_artist_dt_dd(artist_simple_div, 'dl', True)
 
         # ==================== 상세 정보 ===================== #
 
@@ -344,7 +384,10 @@ class Artist:
         artist_detail_award_list = list()
         if soup.select_one('#conts > div.section_atistinfo01'):
             for award in soup.select('#d_artist_award > dl > dd'):
-                artist_detail_award_list.append(award.get_text())
+                p = re.compile(r'(?P<award_name>.*?)[|](?P<award_level>.*)', re.S)
+                m = p.search(award.get_text())
+                if m:
+                    artist_detail_award_list.append(f"{m.group('award_name')} ({m.group('award_level')})")
 
         # 아티스트 소개
         artist_detail_introduce = list()
@@ -366,13 +409,38 @@ class Artist:
         artist_detail_normal_info = self.get_artist_dt_dd(soup, '#conts > div.section_atistinfo04 > dl')
 
         # 아티스트 연관 정보
-        artist_detail_relative_info = self.get_artist_dt_dd(soup, '#conts > div.section_atistinfo05 > dl.list_define.clfix')
+        artist_detail_relative_info = dict()
+        artist_sns_dl = soup.select_one('#conts > div.section_atistinfo05 > dl.list_define_sns.clfix')
+        if artist_sns_dl:
+            sns_dt = artist_sns_dl.select_one('dt')
+            sns_dd = artist_sns_dl.select_one('dd')
+            sns_button = sns_dd.select('button')
+            sns_odd = ''
 
-        self.detail_award_history = artist_detail_award_list
-        self.detail_artist_introduce = artist_detail_introduce
-        self.detail_activity_info = artist_detail_active_info
-        self.detail_info = artist_detail_normal_info
-        self.detail_relative_info = artist_detail_relative_info
+            for btn in sns_button:
+                sns_name = btn.select_one('span.odd_span')
+                if sns_name:
+                    sns_odd += sns_name.get_text()
+                p = re.compile(r'open\(\'(?P<url>.*?)\'', re.DOTALL)
+                m = p.search(str(btn))
+                if m:
+                    sns_odd += f" ({m.group('url')})"
+
+                if btn is not sns_button[-1]:
+                    sns_odd += '\n'
+            artist_detail_relative_info = {
+                    sns_dt.get_text(): sns_odd,
+            }
+
+        artist_detail_relative_info.update(self.get_artist_dt_dd(soup, '#conts > div.section_atistinfo05 > dl.list_define.clfix'))
+
+        self._award_history = artist_detail_award_list
+        self._introduction = artist_detail_introduce
+        self._activity_information = artist_detail_active_info
+        self._personal_information = artist_detail_normal_info
+        self._related_information = artist_detail_relative_info
+
+        self._loaded = True
 
     def get_songs(self):
         """
@@ -426,5 +494,3 @@ class Artist:
                f'\n\n활동 이력: {self.detail_activity_info}' \
                f'\n\n신상 정보: {self.detail_info}' \
                f'\n\n연관 정보: {self.detail_relative_info}'
-
-        pass
